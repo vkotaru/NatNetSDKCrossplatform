@@ -19,6 +19,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 add_message_files(
   FILES
    PointArray.msg
+   PointVelocityStamped.msg
 )
 generate_messages(
   DEPENDENCIES
@@ -50,20 +51,20 @@ target_link_libraries(natnettest
 )
 
 
-## natnettest
-add_executable(mcr
-  src/multicast_receiver.cpp
-  src/PacketClientHelper.cpp
-)
-target_link_libraries(mcr
-  ${Boost_LIBRARIES}
-)
-set_property(TARGET mcr PROPERTY C_STANDARD 11)
+# ## natnettest
+# add_executable(mcr
+#   src/multicast_receiver.cpp
+#   src/PacketClientHelper.cpp
+# )
+# target_link_libraries(mcr
+#   ${Boost_LIBRARIES}
+# )
+# set_property(TARGET mcr PROPERTY C_STANDARD 11)
 
 
 add_executable(natnet_multicast_node 
     src/nn_multicast_node.cpp
-    src/PacketClientHelper.cpp
+    # src/PacketClientHelper.cpp
 )
 add_dependencies(natnet_multicast_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(natnet_multicast_node
