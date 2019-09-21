@@ -74,7 +74,8 @@ int main(int argc, char **argv)
     double previous_time = ros::Time::now().toSec();
     double dt = 0.0;
 
-    while(ros::ok()) {
+    while(ros::ok()) 
+    {
         /* time update */
         current_time = ros::Time::now().toSec();
         dt = current_time-previous_time;
