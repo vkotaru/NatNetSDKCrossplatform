@@ -1,4 +1,13 @@
-NatNetSDKCrossplatform
+# Ros package for NatNetSDKCrossplatform
+
+This pacakge publishes the rigid-bodies and unlabelled markers as ros topics.
+Publishes all the rigidbodies and unlabeled points as
+```
+/mocap/rigid_bodies
+/mocap/unlabeled_points
+```
+
+# NatNetSDKCrossplatform
 
 This repository contains the direct depacketization method of the NatNet SDK to receive data from an OptiTrack Motion Capture system. The SDK can be found at https://optitrack.com/products/natnet-sdk/ and PacketClient helper was taken from this SDK (version 3.1). The portions of the SDK that have been used and are part of this repository are licensed under Apache License, Version 2.0. The remaining code is licensed under MIT.
 
