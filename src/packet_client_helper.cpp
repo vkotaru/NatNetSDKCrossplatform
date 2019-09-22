@@ -133,7 +133,7 @@ void PacketClientHelper::DecodeMarkerID(int sourceID, int* pOutEntityID, int* pO
 //      scope of this function. 
 //
 // *********************************************************************
-void PacketClientHelper::Unpack(char* pData)
+void PacketClientHelper::Unpack(char* pData,  geometry_msgs::PoseArray &rmsg, geometry_msgs::PoseArray &umsg)
 {
     // Checks for NatNet Version number. Used later in function. Packets may be different depending on NatNet version.
     int major = NatNetVersion[0];
@@ -186,9 +186,15 @@ void PacketClientHelper::Unpack(char* pData)
             }
         }
 
-	    // Loop through unlabeled markers
+
+        /********************************
+        // Loop through unlabeled markers
+        /********************************/
+        geometry_msgs::PoseArray tmp_umsg;
+        tmp_umsg.header.stamp = ros::Time::now();
+
         int nOtherMarkers = 0; memcpy(&nOtherMarkers, ptr, 4); ptr += 4;
-		// OtherMarker list is Deprecated
+        // OtherMarker list is Deprecated
         printf("Unidentified Marker Count : %d\n", nOtherMarkers);
         for(int j=0; j < nOtherMarkers; j++)
         {
@@ -196,11 +202,23 @@ void PacketClientHelper::Unpack(char* pData)
             float y = 0.0f; memcpy(&y, ptr, 4); ptr += 4;
             float z = 0.0f; memcpy(&z, ptr, 4); ptr += 4;
             
-			// Deprecated
-			printf("\tMarker %d : pos = [%3.2f,%3.2f,%3.2f]\n",j,x,y,z);
+            // Deprecated
+            printf("\tMarker %d : pos = [%3.2f,%3.2f,%3.2f]\n",j,x,y,z);
+            geometry_msgs::Pose tmp_pose;
+            tmp_pose.position.x = x;
+            tmp_pose.position.y = y;
+            tmp_pose.position.z = z;
+            tmp_umsg.poses.push_back(tmp_pose);
         }
+        umsg = tmp_umsg;
         
+
+        /********************************
         // Loop through rigidbodies
+        /********************************/
+        geometry_msgs::PoseArray tmp_rmsg;
+        tmp_rmsg.header.stamp = ros::Time::now();
+
         int nRigidBodies = 0;
         memcpy(&nRigidBodies, ptr, 4); ptr += 4;
         printf("Rigid Body Count : %d\n", nRigidBodies);
@@ -218,6 +236,15 @@ void PacketClientHelper::Unpack(char* pData)
             printf("ID : %d\n", ID);
             printf("pos: [%3.2f,%3.2f,%3.2f]\n", x,y,z);
             printf("ori: [%3.2f,%3.2f,%3.2f,%3.2f]\n", qx,qy,qz,qw);
+            geometry_msgs::Pose tmp_rpose;
+            tmp_rpose.position.x = x;
+            tmp_rpose.position.y = y;
+            tmp_rpose.position.z = z;
+            tmp_rpose.orientation.x = qx;
+            tmp_rpose.orientation.y = qy;
+            tmp_rpose.orientation.z = qz;
+            tmp_rpose.orientation.w = qw;
+            tmp_rmsg.poses.push_back(tmp_rpose);
 
             // NatNet version 2.0 and later
             if(major >= 2)
@@ -236,6 +263,7 @@ void PacketClientHelper::Unpack(char* pData)
             }
            
         } // Go to next rigid body
+        rmsg = tmp_rmsg;
 
 
         // Skeletons (NatNet version 2.1 and later)

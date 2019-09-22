@@ -33,6 +33,10 @@ Usage [optional]:
 // Adopted from PacketClient.cpp (NatNetSDK 3.1)
 // Windows Socket related functions removed
 
+#include "ros/ros.h"
+#include "geometry_msgs/PoseArray.h"
+#include "geometry_msgs/Pose.h"
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <cstring>
@@ -59,6 +63,16 @@ Usage [optional]:
 
 #define MAX_PACKETSIZE				100000	// max size of packet (actual packet size is dynamic)
 
+// This should match the multicast address listed in Motive's streaming settings.
+#define MULTICAST_ADDRESS		"239.255.42.99"    
+
+// NatNet Command channel
+#define PORT_COMMAND            1510
+
+// NatNet Data channel
+#define PORT_DATA  			    1511                
+
+
 // sender
 typedef struct
 {
@@ -84,41 +98,32 @@ typedef struct
 } sPacket;
 
 
-// This should match the multicast address listed in Motive's streaming settings.
-#define MULTICAST_ADDRESS		"239.255.42.99"    
-
-// NatNet Command channel
-#define PORT_COMMAND            1510
-
-// NatNet Data channel
-#define PORT_DATA  			    1511                
-
-// NatNetVersion: 240.164.53.0
-// ServerVersion: 3.0.0.0
-
-
 class PacketClientHelper
 {
 private:
     /* data */
+    // NatNetVersion: 240.164.53.0
+    // ServerVersion: 3.0.0.0
     int NatNetVersion[4] = {240,164,53,0};
     int ServerVersion[4] = {3,0,0,0};
 
 
 
     /* functions */
-    void buildConnectPacket(std::vector<char>& buffer);
-    void UnpackCommand(char* pData);
     int strcpy_s(char* dest, size_t destsz, const char *src);
     template<typename... Args> int sprintf_s(char * buffer, size_t bufsz, const char * format, Args... args);
     bool DecodeTimecode(unsigned int inTimecode, unsigned int inTimecodeSubframe, int* hour, int* minute, int* second, int* frame, int* subframe);
     bool TimecodeStringify(unsigned int inTimecode, unsigned int inTimecodeSubframe, char *Buffer, int BufferSize);
     void DecodeMarkerID(int sourceID, int* pOutEntityID, int* pOutMemberID);
-    void Unpack(char* pData);
 
 public:
     PacketClientHelper(/* args */);
     ~PacketClientHelper();
+
+    void buildConnectPacket(std::vector<char>& buffer);
+    void UnpackCommand(char* pData);
+    void Unpack(char* pData, geometry_msgs::PoseArray &rmsg, geometry_msgs::PoseArray &umsg);
+
 };
 
 
