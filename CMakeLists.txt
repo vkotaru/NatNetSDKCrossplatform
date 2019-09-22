@@ -50,21 +50,9 @@ target_link_libraries(natnettest
   ${Boost_LIBRARIES}
 )
 
-
-# ## natnettest
-# add_executable(mcr
-#   src/multicast_receiver.cpp
-#   src/PacketClientHelper.cpp
-# )
-# target_link_libraries(mcr
-#   ${Boost_LIBRARIES}
-# )
-# set_property(TARGET mcr PROPERTY C_STANDARD 11)
-
-
 add_executable(natnet_multicast_node 
-    src/nn_multicast_node.cpp
-    # src/PacketClientHelper.cpp
+    src/natnet_multicast.cpp
+    src/packet_client_helper.cpp
 )
 add_dependencies(natnet_multicast_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(natnet_multicast_node

@@ -1,99 +1,17 @@
-// 
-// Natnet multicast ros node to publish the markers & rigidbodies
-
-// based on https://github.com/whoenig/NatNetSDKCrossplatform
-// 
-
-#include "natnet_multicast.h"
 #include "packet_client_helper.h"
 
-/* msgs */
-#include "natnet_sdk_crossplatform/PointArray.h"
-#include "natnet_sdk_crossplatform/PointVelocityStamped.h"
-#include "geometry_msgs/Point.h"
-
-
-float prev_pos[3] = {0.0, 0.0, 0.0};
-float vel[3] = {0.0, 0.0, 0.0};
-float prev_time = 0.0;
-
-natnet_sdk_crossplatform::PointArray _msg;
-natnet_sdk_crossplatform::PointVelocityStamped pos_vel_msg;
-ros::Publisher chatter_pub;
-
-#include <inttypes.h>
-#include <stdio.h>
-#include <cstring>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <vector>
-#include <cmath>
-
-#define MAX_NAMELENGTH              256
-
-// NATNET message ids
-#define NAT_CONNECT                 0 
-#define NAT_SERVERINFO              1
-#define NAT_REQUEST                 2
-#define NAT_RESPONSE                3
-#define NAT_REQUEST_MODELDEF        4
-#define NAT_MODELDEF                5
-#define NAT_REQUEST_FRAMEOFDATA     6
-#define NAT_FRAMEOFDATA             7
-#define NAT_MESSAGESTRING           8
-#define NAT_UNRECOGNIZED_REQUEST    100
-#define UNDEFINED                   999999.9999
-
-#define MAX_PACKETSIZE				100000	// max size of packet (actual packet size is dynamic)
-
-// sender
-typedef struct
+PacketClientHelper::PacketClientHelper(/* args */)
 {
-    char szName[MAX_NAMELENGTH];            // sending app's name
-    unsigned char Version[4];               // sending app's version [major.minor.build.revision]
-    unsigned char NatNetVersion[4];         // sending app's NatNet version [major.minor.build.revision]
+}
 
-} sSender;
-
-typedef struct
+PacketClientHelper::~PacketClientHelper()
 {
-    unsigned short iMessage;                // message ID (e.g. NAT_FRAMEOFDATA)
-    unsigned short nDataBytes;              // Num bytes in payload
-    union
-    {
-        unsigned char  cData[MAX_PACKETSIZE];
-        char           szData[MAX_PACKETSIZE];
-        unsigned long  lData[MAX_PACKETSIZE/4];
-        float          fData[MAX_PACKETSIZE/4];
-        sSender        Sender;
-    } Data;                                 // Payload incoming from NatNet Server
-
-} sPacket;
+}
 
 
-// bool IPAddress_StringToAddr(char *szNameOrAddress, struct in_addr *Address);
-void Unpack(char* pData);
-// int GetLocalIPAddresses(unsigned long Addresses[], int nMax);
-// int SendCommand(char* szCOmmand);
-
-// This should match the multicast address listed in Motive's streaming settings.
-#define MULTICAST_ADDRESS		"239.255.42.99"    
-
-// NatNet Command channel
-#define PORT_COMMAND            1510
-
-// NatNet Data channel
-#define PORT_DATA  			    1511                
-
-// NatNetVersion: 240.164.53.0
-// ServerVersion: 3.0.0.0
 
 
-int NatNetVersion[4] = {240,164,53,0};
-int ServerVersion[4] = {3,0,0,0};
-
-void buildConnectPacket(std::vector<char>& buffer)
+void PacketClientHelper::buildConnectPacket(std::vector<char>& buffer)
 {
     sPacket packet;
     packet.iMessage = NAT_CONNECT;
@@ -102,7 +20,7 @@ void buildConnectPacket(std::vector<char>& buffer)
     memcpy(buffer.data(), &packet, 4);
 }
 
-void UnpackCommand(char* pData)
+void PacketClientHelper::UnpackCommand(char* pData)
 {
     const sPacket* replyPacket = reinterpret_cast<const sPacket*>(pData);
 
@@ -151,20 +69,20 @@ void UnpackCommand(char* pData)
 
 // non-standard/optional extension of C; define an unsafe version here
 // to not change example code below
-int strcpy_s(char* dest, size_t destsz, const char *src)
+int PacketClientHelper::strcpy_s(char* dest, size_t destsz, const char *src)
 {
     strcpy(dest, src);
     return 0;
 }
 
-template<typename... Args> int sprintf_s(char * buffer, size_t bufsz, const char * format, Args... args)
+template<typename... Args> int PacketClientHelper::sprintf_s(char * buffer, size_t bufsz, const char * format, Args... args)
 {
   return sprintf(buffer, format, args...);
 }
 
 // Funtion that assigns a time code values to 5 variables passed as arguments
 // Requires an integer from the packet as the timecode and timecodeSubframe
-bool DecodeTimecode(unsigned int inTimecode, unsigned int inTimecodeSubframe, int* hour, int* minute, int* second, int* frame, int* subframe)
+bool PacketClientHelper::DecodeTimecode(unsigned int inTimecode, unsigned int inTimecodeSubframe, int* hour, int* minute, int* second, int* frame, int* subframe)
 {
 	bool bValid = true;
 
@@ -178,7 +96,7 @@ bool DecodeTimecode(unsigned int inTimecode, unsigned int inTimecodeSubframe, in
 }
 
 // Takes timecode and assigns it to a string
-bool TimecodeStringify(unsigned int inTimecode, unsigned int inTimecodeSubframe, char *Buffer, int BufferSize)
+bool PacketClientHelper::TimecodeStringify(unsigned int inTimecode, unsigned int inTimecodeSubframe, char *Buffer, int BufferSize)
 {
 	bool bValid;
 	int hour, minute, second, frame, subframe;
@@ -192,7 +110,7 @@ bool TimecodeStringify(unsigned int inTimecode, unsigned int inTimecodeSubframe,
 	return bValid;
 }
 
-void DecodeMarkerID(int sourceID, int* pOutEntityID, int* pOutMemberID)
+void PacketClientHelper::DecodeMarkerID(int sourceID, int* pOutEntityID, int* pOutMemberID)
 {
     if (pOutEntityID)
         *pOutEntityID = sourceID >> 16;
@@ -201,8 +119,21 @@ void DecodeMarkerID(int sourceID, int* pOutEntityID, int* pOutMemberID)
         *pOutMemberID = sourceID & 0x0000ffff;
 }
 
-
-void Unpack(char* pData)
+// *********************************************************************
+//
+//  Unpack Data:
+//      Recieves pointer to bytes that represent a packet of data
+//
+//      There are lots of print statements that show what
+//      data is being stored
+//
+//      Most memcpy functions will assign the data to a variable.
+//      Use this variable at your descretion. 
+//      Variables created for storing data do not exceed the 
+//      scope of this function. 
+//
+// *********************************************************************
+void PacketClientHelper::Unpack(char* pData)
 {
     // Checks for NatNet Version number. Used later in function. Packets may be different depending on NatNet version.
     int major = NatNetVersion[0];
@@ -255,13 +186,10 @@ void Unpack(char* pData)
             }
         }
 
-        /********************************/
 	    // Loop through unlabeled markers
-        /********************************/
         int nOtherMarkers = 0; memcpy(&nOtherMarkers, ptr, 4); ptr += 4;
 		// OtherMarker list is Deprecated
         printf("Unidentified Marker Count : %d\n", nOtherMarkers);
-        natnet_sdk_crossplatform::PointArray tmp_msg;
         for(int j=0; j < nOtherMarkers; j++)
         {
             float x = 0.0f; memcpy(&x, ptr, 4); ptr += 4;
@@ -270,20 +198,7 @@ void Unpack(char* pData)
             
 			// Deprecated
 			printf("\tMarker %d : pos = [%3.2f,%3.2f,%3.2f]\n",j,x,y,z);
-
-            /*************************************/
-            /******** conditions on the point ****/
-            /*************************************/
-            if (x<=1 && std::abs(y) <=2 ) {
-                geometry_msgs::Point tmp_point;
-                tmp_point.x = x;
-                tmp_point.y = y;
-                tmp_point.z = z;
-                tmp_msg.points.push_back(tmp_point);
-            }
         }
-        _msg = tmp_msg;
-        
         
         // Loop through rigidbodies
         int nRigidBodies = 0;
@@ -705,118 +620,5 @@ void Unpack(char* pData)
     {
         printf("Unrecognized Packet Type.\n");
     }
-
-}
-
-class receiver
-{
-public:
-  receiver(boost::asio::io_service& io_service,
-      const boost::asio::ip::address& listen_address,
-      const boost::asio::ip::address& multicast_address)
-    : socket_(io_service)
-    , sender_endpoint_()
-    , data_(20000)
-  {
-    // Create the socket so that multiple may be bound to the same address.
-    boost::asio::ip::udp::endpoint listen_endpoint(
-        listen_address, PORT_DATA);
-    socket_.open(listen_endpoint.protocol());
-    socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-    socket_.bind(listen_endpoint);
-
-    // Join the multicast group.
-    socket_.set_option(
-        boost::asio::ip::multicast::join_group(multicast_address));
-
-    do_receive();
-  }
-
-private:
-  void do_receive()
-  {
-    socket_.async_receive_from(
-        boost::asio::buffer(data_.data(), data_.size()), sender_endpoint_,
-        [this](boost::system::error_code ec, std::size_t length)
-        {
-          if (!ec)
-          {
-            // std::cout.write(data_.data(), length);
-            // std::cout << std::endl;
-            Unpack(data_.data());
-            _msg.header.stamp = ros::Time::now();
-            chatter_pub.publish(_msg);
-
-            do_receive();
-          }
-        });
-  }
-
-  boost::asio::ip::udp::socket socket_;
-  boost::asio::ip::udp::endpoint sender_endpoint_;
-  std::vector<char> data_;
-};
-
-
-int main(int argc, char **argv)
-{
-
-    // Connect to command port to query version
-    if (argc != 2)
-    {
-        std::cerr << "Usage: blocking_udp_echo_client <host>\n";
-        return 1;
-    }
-
-    ros::init(argc, argv, "natnet_multicast_node");
-    ros::NodeHandle nh, private_nh("~");
-    chatter_pub = nh.advertise<natnet_sdk_crossplatform::PointArray>("/mocap/points", 3);
-
-    /* time variables */
-    double current_time = ros::Time::now().toSec();
-    double previous_time = ros::Time::now().toSec();
-    double dt = 0.0;
-
-    // while(ros::ok()) 
-    {
-        /* time update */
-        prev_time = ros::Time::now().toSec();
-        // dt = current_time-previous_time;
-        // ROS_INFO("FREQ: %f", (1/dt));
-        // previous_time = current_time;
-
-        try
-        {
-            boost::asio::io_service io_service_cmd;
-
-            udp::socket socket_cmd(io_service_cmd, udp::endpoint(udp::v4(), 0));
-
-            udp::resolver resolver_cmd(io_service_cmd);
-            udp::endpoint endpoint_cmd = *resolver_cmd.resolve({udp::v4(), argv[1], std::to_string(PORT_COMMAND)});
-
-            std::vector<char> connectCmd;
-            buildConnectPacket(connectCmd);
-            socket_cmd.send_to(boost::asio::buffer(connectCmd.data(), connectCmd.size()), endpoint_cmd);
-
-            std::vector<char> reply(MAX_PACKETSIZE);
-            udp::endpoint sender_endpoint;
-            size_t reply_length = socket_cmd.receive_from(
-                boost::asio::buffer(reply, MAX_PACKETSIZE), sender_endpoint);
-
-            UnpackCommand(reply.data());
-
-            // Listen on multicast address
-            boost::asio::io_service io_service;
-            receiver r(io_service,
-                boost::asio::ip::address::from_string("0.0.0.0"),
-                boost::asio::ip::address::from_string(MULTICAST_ADDRESS));
-            io_service.run();
-        }
-        catch (std::exception& e)
-        {
-            std::cerr << "Exception: " << e.what() << "\n";
-        }
-    }
-    ros::shutdown();
 
 }
